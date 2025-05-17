@@ -14,7 +14,6 @@ Executes a `command [args...]`, filters its `stdout` based on user-defined patte
 - [Execution & Transparency](#execution--transparency)
     - [Exit Status](#exit-status)
 - [Examples](#examples)
-- [Building from Source](#building-from-source)
 
 ## Synopsis
 
