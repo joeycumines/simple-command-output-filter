@@ -3,11 +3,14 @@ package cli
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"os/signal"
 )
+
+var errDueToMode = errors.New("error due to error mode")
 
 func (x *CLI) run() error {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -43,34 +46,63 @@ func (x *CLI) run() error {
 		}()
 	}
 
-	scanner := bufio.NewScanner(stdoutPipe)
+	var content bool
 
-	for scanner.Scan() {
-		line := scanner.Text()
+	{
+		scanner := bufio.NewScanner(stdoutPipe)
 
-		var matched bool
+		for scanner.Scan() {
+			line := scanner.Text()
 
-		for _, re := range x.compiledPatterns {
-			if re.MatchString(line) {
-				matched = true
-				break
+			var matched bool
+
+			for _, re := range x.compiledPatterns {
+				if re.MatchString(line) {
+					matched = true
+					break
+				}
+			}
+
+			if x.invertMatch != matched {
+				_, _ = fmt.Fprintln(x.Output, line)
+				if !content {
+					content = true
+				}
 			}
 		}
 
-		if x.invertMatch != matched {
-			_, _ = fmt.Fprintln(x.Output, line)
+		err = scanner.Err()
+		if err != nil {
+			return err
 		}
 	}
 
-	err = scanner.Err()
-
-	if err == nil {
-		err = stdoutPipe.Close()
+	err = stdoutPipe.Close()
+	if err != nil {
+		return err
 	}
 
-	if err == nil {
-		err = cmd.Wait()
+	err = cmd.Wait()
+	if err != nil {
+		return err
 	}
 
-	return err
+	err = ctx.Err()
+	if err != nil {
+		return err
+	}
+
+	switch x.errorMode {
+	case errorModeOnContent:
+		if content {
+			return errDueToMode
+		}
+
+	case errorModeNoContent:
+		if !content {
+			return errDueToMode
+		}
+	}
+
+	return nil
 }

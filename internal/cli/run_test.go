@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"errors"
 	"regexp"
 	"strings"
 	"testing"
@@ -224,5 +225,169 @@ func TestCLI_multipleLines(t *testing.T) {
 	expected := "line1\nline3\n"
 	if got := stdout.String(); got != expected {
 		t.Errorf("Expected output %q, got %q", expected, got)
+	}
+}
+
+func TestCLI_run_errorModes(t *testing.T) {
+	tests := []struct {
+		name           string
+		command        string
+		args           []string
+		patterns       []string
+		invertMatch    bool
+		errorMode      errorMode
+		expectedOutput string
+		expectedError  error
+	}{
+		// errorModeDefault
+		{
+			name:           "default mode, with output",
+			command:        "echo",
+			args:           []string{"hello"},
+			patterns:       []string{"hello"},
+			errorMode:      errorModeDefault,
+			expectedOutput: "hello\n",
+			expectedError:  nil,
+		},
+		{
+			name:           "default mode, no output (pattern mismatch)",
+			command:        "echo",
+			args:           []string{"hello"},
+			patterns:       []string{"world"},
+			errorMode:      errorModeDefault,
+			expectedOutput: "",
+			expectedError:  nil,
+		},
+		{
+			name:           "default mode, no output (no patterns)",
+			command:        "echo",
+			args:           []string{"hello"},
+			patterns:       nil,
+			errorMode:      errorModeDefault,
+			expectedOutput: "", // No patterns, no output
+			expectedError:  nil,
+		},
+		{
+			name:           "default mode, with output (no patterns, inverted)",
+			command:        "echo",
+			args:           []string{"hello"},
+			patterns:       nil,
+			invertMatch:    true,
+			errorMode:      errorModeDefault,
+			expectedOutput: "hello\n", // No patterns, inverted, all output
+			expectedError:  nil,
+		},
+
+		// errorModeNoContent
+		{
+			name:           "no-content mode, with output",
+			command:        "echo",
+			args:           []string{"hello"},
+			patterns:       []string{"hello"},
+			errorMode:      errorModeNoContent,
+			expectedOutput: "hello\n",
+			expectedError:  nil,
+		},
+		{
+			name:           "no-content mode, no output (pattern mismatch)",
+			command:        "echo",
+			args:           []string{"hello"},
+			patterns:       []string{"world"},
+			errorMode:      errorModeNoContent,
+			expectedOutput: "",
+			expectedError:  errDueToMode,
+		},
+		{
+			name:           "no-content mode, no output (no patterns)",
+			command:        "echo",
+			args:           []string{"hello"},
+			patterns:       nil,
+			errorMode:      errorModeNoContent,
+			expectedOutput: "",
+			expectedError:  errDueToMode,
+		},
+		{
+			name:           "no-content mode, with output (no patterns, inverted)",
+			command:        "echo",
+			args:           []string{"hello"},
+			patterns:       nil,
+			invertMatch:    true,
+			errorMode:      errorModeNoContent,
+			expectedOutput: "hello\n",
+			expectedError:  nil,
+		},
+
+		// errorModeOnContent
+		{
+			name:           "on-content mode, with output",
+			command:        "echo",
+			args:           []string{"hello"},
+			patterns:       []string{"hello"},
+			errorMode:      errorModeOnContent,
+			expectedOutput: "hello\n",
+			expectedError:  errDueToMode,
+		},
+		{
+			name:           "on-content mode, no output (pattern mismatch)",
+			command:        "echo",
+			args:           []string{"hello"},
+			patterns:       []string{"world"},
+			errorMode:      errorModeOnContent,
+			expectedOutput: "",
+			expectedError:  nil,
+		},
+		{
+			name:           "on-content mode, no output (no patterns)",
+			command:        "echo",
+			args:           []string{"hello"},
+			patterns:       nil,
+			errorMode:      errorModeOnContent,
+			expectedOutput: "",
+			expectedError:  nil,
+		},
+		{
+			name:           "on-content mode, with output (no patterns, inverted)",
+			command:        "echo",
+			args:           []string{"hello"},
+			patterns:       nil,
+			invertMatch:    true,
+			errorMode:      errorModeOnContent,
+			expectedOutput: "hello\n",
+			expectedError:  errDueToMode,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			cli := &CLI{
+				Input:       strings.NewReader(""),
+				Output:      &stdout,
+				ErrOut:      &stderr,
+				command:     tc.command,
+				args:        tc.args,
+				invertMatch: tc.invertMatch,
+				errorMode:   tc.errorMode,
+			}
+			if tc.patterns != nil {
+				cli.compiledPatterns = make([]*regexp.Regexp, len(tc.patterns))
+				for i, p := range tc.patterns {
+					cli.compiledPatterns[i] = compileSinglePattern(p)
+				}
+			}
+
+			err := cli.run()
+
+			if !errors.Is(err, tc.expectedError) {
+				t.Errorf("run() error = %v, want %v", err, tc.expectedError)
+			}
+
+			if got := stdout.String(); got != tc.expectedOutput {
+				t.Errorf("stdout = %q, want %q", got, tc.expectedOutput)
+			}
+			if tc.expectedError != nil && stderr.String() != "" {
+				t.Logf("stderr with expected error: %s", stderr.String())
+			}
+		})
 	}
 }

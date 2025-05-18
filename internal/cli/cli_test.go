@@ -62,6 +62,48 @@ func TestCLI_Main_integration(t *testing.T) {
 			expectedOutput: "",
 			expectedCode:   1,
 		},
+		{
+			name:           "error mode no-content, no output",
+			args:           []string{"-e", "no-content", "echo", "-n", ""}, // echo -n produces no output
+			expectedOutput: "",
+			expectedCode:   1, // Should exit 1 due to no-content mode and no output
+		},
+		{
+			name:           "error mode no-content, with output",
+			args:           []string{"-e", "no-content", "-p", "hello*", "echo", "hello world"},
+			expectedOutput: "hello world\n",
+			expectedCode:   0, // Should exit 0
+		},
+		{
+			name:           "error mode on-content, with output",
+			args:           []string{"-e", "on-content", "-p", "hello*", "echo", "hello world"},
+			expectedOutput: "hello world\n",
+			expectedCode:   1, // Should exit 1 due to on-content mode and output
+		},
+		{
+			name:           "error mode on-content, no output",
+			args:           []string{"-e", "on-content", "-p", "foo", "echo", "hello world"},
+			expectedOutput: "",
+			expectedCode:   0, // Should exit 0
+		},
+		{
+			name:           "error mode on-content, no output (no patterns, inverted)",
+			args:           []string{"-e", "on-content", "-v", "echo", "hello world"}, // -v with no patterns means all output
+			expectedOutput: "hello world\n",
+			expectedCode:   1, // Should exit 1 due to on-content and output
+		},
+		{
+			name:           "error mode no-content, with output (no patterns, inverted)",
+			args:           []string{"-e", "no-content", "-v", "echo", "hello world"}, // -v with no patterns means all output
+			expectedOutput: "hello world\n",
+			expectedCode:   0, // Should exit 0
+		},
+		{
+			name:           "invalid error mode value",
+			args:           []string{"-e", "bogus", "echo", "hello"},
+			expectedOutput: "", // Error message will be on stderr
+			expectedCode:   2,  // Should exit 2 due to init error
+		},
 	}
 
 	origStdin, origStdout, origStderr := os.Stdin, os.Stdout, os.Stderr

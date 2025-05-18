@@ -15,6 +15,7 @@ type CLI struct {
 	ErrOut           io.Writer
 	flagSet          *flag.FlagSet
 	command          string
+	errorMode        errorMode
 	rawPatterns      stringSliceFlag
 	patternFiles     stringSliceFlag
 	compiledPatterns []*regexp.Regexp
@@ -41,6 +42,12 @@ func (x *CLI) Main(args []string) int {
 	}
 
 	if err := x.run(); err != nil {
+		if errors.Is(err, errDueToMode) {
+			// everything was ok, but we either had, or didn't have content
+			// (whichever was the opposite of what we wanted)
+			return 1
+		}
+
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
 			code := exitErr.ExitCode()

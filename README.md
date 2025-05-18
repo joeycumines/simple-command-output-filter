@@ -17,7 +17,7 @@ Executes a `command [args...]`, filters its `stdout` based on user-defined patte
 
 ## Synopsis
 
-```bash
+```sh
 simple-command-output-filter [options] [--] command [args...]
 ```
 
@@ -28,6 +28,10 @@ simple-command-output-filter [options] [--] command [args...]
 * `-p PATTERN`, `--pattern PATTERN`: Defines a pattern. Use multiple times for multiple patterns.
 * `-f FILE`, `--pattern-file FILE`: Reads patterns from `FILE` (one per line). Use multiple times.
 * `-v`, `--invert-match`: Inverts the match; prints lines that *do not* match any pattern.
+* `-e MODE`, `--error-mode MODE`: Alters exit status based on filtered output *if the command succeeds*. `MODE` can be:
+    * `default`: (Default) Exit status primarily mirrors the command's.
+    * `no-content`: Exits `1` if the filter produces *no output* (and command succeeded), else `0`.
+    * `on-content`: Exits `1` if the filter produces *any output* (and command succeeded), else `0`.
 * `-h`, `--help`: Displays the help message and exits.
 
 ## Pattern Matching
@@ -68,21 +72,24 @@ Patterns are case-sensitive and matched against the entire line (implicitly anch
 
 ### Exit Status
 
-The filter aims to mirror the command's exit status or indicate its own errors:
+The filter aims to mirror the command's exit status, to optionally `exit 1` on
+presence or lack of content, or indicate its own errors:
 
 * **`0`**:
-    * Successful execution: The filter and the command completed successfully (command exited `0`).
-    * Help displayed (`-h` or `--help`).
-* **`N` (where `N > 0`)**:
-    * The executed command exited with a positive status `N`. The filter returns `N`.
-* **`1`**: Runtime errors specific to the command execution process:
-    * Command terminated by a signal (e.g., `SIGINT`, `SIGTERM`).
-    * Command exited with a status $\\le 0$ (as reported by `os/exec.ExitError.ExitCode()`, typically `-1` for signals).
-    * Internal filter error during command setup or I/O (e.g., pipe creation failed, error reading command output).
-* **`2`**: Initialization or argument errors for the filter itself:
-    * Invalid command-line flags.
-    * No command specified.
-    * Error reading a pattern file (e.g., file not found, permission denied).
+    * Normal successful execution: The command completed successfully (exited `0`), AND the active error mode (if any)
+      condition for exit `0` was met.
+    * Help displayed (`-h`, `--help`).
+* **`1`**:
+    * Error mode triggered: The command completed successfully (exited `0`), but the active error mode (`no-content` or
+      `on-content`) condition for exit `1` was met.
+    * Command failure/runtime error: The command was terminated by a signal, exited with a generic non-positive status (
+      e.g., Go's internal `-1` for signals), or a runtime error occurred within the filter during command execution or
+      setup.
+* **`N` (Specific positive integer from the command, e.g., `5`, `127`):**
+    * Command failure: The executed command explicitly exited with this positive status `N`. This exit status is
+      propagated directly from the command.
+* **`2`**:
+    * Filter initialization error: Invalid command-line flags, no command specified, or errors loading pattern files.
 
 ## Examples
 

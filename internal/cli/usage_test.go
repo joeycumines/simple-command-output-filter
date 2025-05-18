@@ -82,6 +82,51 @@ func TestCLI_init(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:      "with error mode default",
+			args:      []string{"-e", "default", "echo", "hello"},
+			wantError: false,
+			checkFunc: func(t *testing.T, c *CLI) {
+				if c.errorMode != errorModeDefault {
+					t.Errorf("Expected errorMode to be %q, got %q", errorModeDefault, c.errorMode)
+				}
+			},
+		},
+		{
+			name:      "with error mode no-content",
+			args:      []string{"-e", "no-content", "echo", "hello"},
+			wantError: false,
+			checkFunc: func(t *testing.T, c *CLI) {
+				if c.errorMode != errorModeNoContent {
+					t.Errorf("Expected errorMode to be %q, got %q", errorModeNoContent, c.errorMode)
+				}
+			},
+		},
+		{
+			name:      "with error mode on-content",
+			args:      []string{"-e", "on-content", "echo", "hello"},
+			wantError: false,
+			checkFunc: func(t *testing.T, c *CLI) {
+				if c.errorMode != errorModeOnContent {
+					t.Errorf("Expected errorMode to be %q, got %q", errorModeOnContent, c.errorMode)
+				}
+			},
+		},
+		{
+			name:      "with invalid error mode",
+			args:      []string{"-e", "invalid", "echo", "hello"},
+			wantError: true,
+		},
+		{
+			name:      "with error-mode alias",
+			args:      []string{"--error-mode", "no-content", "echo", "hello"},
+			wantError: false,
+			checkFunc: func(t *testing.T, c *CLI) {
+				if c.errorMode != errorModeNoContent {
+					t.Errorf("Expected errorMode to be %q, got %q", errorModeNoContent, c.errorMode)
+				}
+			},
+		},
 	}
 
 	for _, tc := range tests {

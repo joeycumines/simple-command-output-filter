@@ -41,6 +41,14 @@ BEHAVIOR WITHOUT PATTERNS:
     - With    -v/--invert-match: all lines will be output from the command's stdout
       (as all lines are considered "non-matching" against an empty set of patterns).
 
+EXIT STATUS AND ERROR MODES (-e, --error-mode):
+  Alters exit status based on WRITTEN content, ONLY if the command succeeds.
+  If the command fails, its original exit status is used.
+  Modes:
+    - 'default': (Default) Exit status mirrors the command's status.
+    - 'no-content': Exit 1 if no content (command succeeded), else 0.
+    - 'on-content': Exit 1 if any content (command succeeded), else 0.
+
 OPTIONS:
 `
 
@@ -50,6 +58,8 @@ func (x *CLI) usage() {
 }
 
 func (x *CLI) init(args []string) error {
+	x.errorMode = errorModeDefault
+
 	x.flagSet = flag.NewFlagSet("simple-command-output-filter", flag.ContinueOnError)
 
 	x.flagSet.Usage = x.usage
@@ -63,6 +73,8 @@ func (x *CLI) init(args []string) error {
 	x.flagSet.Var(&x.patternFiles, "pattern-file", "Alias for -f.")
 	x.flagSet.BoolVar(&x.invertMatch, "v", false, "Invert match (selects non-matching lines).")
 	x.flagSet.BoolVar(&x.invertMatch, "invert-match", false, "Alias for -v.")
+	x.flagSet.Var(&x.errorMode, "e", "Error mode: 'default', 'no-content', or 'on-content'.")
+	x.flagSet.Var(&x.errorMode, "error-mode", "Alias for -e.")
 
 	if err := x.flagSet.Parse(args); err != nil {
 		return err // inclusive of flag.ErrHelp
