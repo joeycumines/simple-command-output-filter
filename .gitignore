@@ -1,3 +1,10 @@
+# generic ignore rules
+.idea
+.vscode
+.DS_Store
+Thumbs.db
+
+# specific project ignore rules
 coverage.out
 /coverage-all.out
 /config.mk
