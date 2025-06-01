@@ -12,8 +12,6 @@ RUN set -x \
     && echo 'nobody:x:65534:65534:Nobody:/:' >/tmp/dist/etc-passwd
 
 FROM scratch
-ARG RELEASE
-LABEL org.opencontainers.image.version=${RELEASE}
 COPY --from=builder --chown=0:0 --chmod=0755 /tmp/dist/simple-command-output-filter /usr/local/bin/simple-command-output-filter
 COPY --from=builder --chown=0:0 --chmod=0644 /tmp/dist/etc-passwd /etc/passwd
 USER 65534:65534
