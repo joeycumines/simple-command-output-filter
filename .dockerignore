@@ -9,5 +9,5 @@
 coverage-all.out
 config.mk
 
-# dockerignore specific rules
+# .dockerignore specific rules
 **/.git
